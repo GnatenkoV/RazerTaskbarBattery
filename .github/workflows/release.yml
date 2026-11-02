@@ -1,0 +1,81 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Validate release tag against Version.props
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content -Raw 'Version.props'
+          $version = [string]$props.Project.PropertyGroup.Version
+          $tag = '${{ github.ref_name }}'
+          if ($tag -ne "v$version") {
+            throw "Tag '$tag' does not match Version.props ('$version')."
+          }
+
+      - name: Publish self-contained single-file application
+        shell: pwsh
+        run: |
+          dotnet publish 'RazerTaskbarBattery/RazerTaskbarBattery.csproj' `
+            -c Release `
+            -p:PublishProfile=SingleFile
+
+      - name: Prepare versioned release assets
+        id: assets
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content -Raw 'Version.props'
+          $version = [string]$props.Project.PropertyGroup.Version
+          $binary = 'RazerTaskbarBattery/publish/RazerTaskbarBattery.exe'
+          if (-not (Test-Path $binary)) {
+            throw "Expected single-file executable not found: $binary"
+          }
+          New-Item -ItemType Directory -Force 'artifacts' | Out-Null
+          New-Item -ItemType Directory -Force 'artifacts/staging' | Out-Null
+          Copy-Item $binary "artifacts/RazerTaskbarBattery-v$version-win-x64.exe"
+          Copy-Item $binary 'artifacts/staging/RazerTaskbarBattery.exe'
+          Copy-Item 'README.md' 'artifacts/staging/README.md'
+          Compress-Archive -Path 'artifacts/staging/*' -DestinationPath "artifacts/RazerTaskbarBattery-v$version-win-x64.zip"
+          Remove-Item -Recurse -Force 'artifacts/staging'
+          Get-FileHash "artifacts/RazerTaskbarBattery-v$version-win-x64.exe" -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  RazerTaskbarBattery-v$version-win-x64.exe" } |
+            Set-Content -Encoding ascii "artifacts/RazerTaskbarBattery-v$version-win-x64.sha256"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RazerTaskbarBattery-win-x64
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Razer Taskbar Battery ${{ steps.assets.outputs.version }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.exe
+            artifacts/*.zip
+            artifacts/*.sha256

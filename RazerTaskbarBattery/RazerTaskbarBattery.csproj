@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Version.props" />
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <Authors>Vitaliy Hnatenko</Authors>
+    <Product>RazerTaskbarBattery</Product>
+    <Description>Windows Razer device battery monitor</Description>
+    <RepositoryUrl>https://github.com/GnatenkoV/RazerTaskbarBattery</RepositoryUrl>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>RazerTaskbarBattery</AssemblyName>
+    <RootNamespace>RazerTaskbar</RootNamespace>
+    <ApplicationIcon>Assets\App.ico</ApplicationIcon>
+    
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Platforms>x64</Platforms>
+    
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\App.ico" />
+  </ItemGroup>
+  <!-- The legacy WinForms UI must not compile if files remain after an in-place update. -->
+  <ItemGroup>
+    <Compile Remove="UI/Theme.cs;UI/CaptureTheme.cs;UI/SettingsDialog.cs;UI/AboutDialog.cs;UI/TrayApplicationContext.cs;UI/CaptureContextMenu.cs;UI/ThemedWindow.cs;Program.cs" />
+    <EmbeddedResource Remove="UI/SettingsDialog.resx" />
+  </ItemGroup>
+  <!-- No debug battery preview XAML or code-behind is compiled into Release builds. -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Page Remove="UI/Views/DebugBatterySection.xaml" />
+    <Compile Remove="UI/Views/DebugBatterySection.xaml.cs" />
+  </ItemGroup>
+</Project>

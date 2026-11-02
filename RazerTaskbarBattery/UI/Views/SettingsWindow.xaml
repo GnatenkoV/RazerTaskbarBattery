@@ -1,0 +1,153 @@
+<Window x:Class="RazerTaskbar.UI.Views.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:controls="clr-namespace:RazerTaskbar.UI.Controls" Icon="/Assets/App.ico" Title="Razer Taskbar Battery — Settings" Width="680" Height="680" MinWidth="580" MinHeight="510" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize" Background="{DynamicResource CaptureProtectorWindowBrush}" Foreground="{DynamicResource CaptureProtectorTextBrush}" FontFamily="Segoe UI" SnapsToDevicePixels="True" UseLayoutRounding="True">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="32" CornerRadius="0" GlassFrameThickness="0" ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+    <Border Background="{DynamicResource CaptureProtectorWindowBrush}" BorderBrush="{DynamicResource CaptureProtectorBorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="76"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="62"/>
+            </Grid.RowDefinitions>
+            <controls:WindowHeader Grid.Row="0"/>
+            <Border Grid.Row="1" Background="{DynamicResource CaptureProtectorSidebarBrush}" BorderBrush="{DynamicResource CaptureProtectorBorderBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Margin="21,12,20,9">
+                    <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Text="RAZER TASKBAR BATTERY" Foreground="{DynamicResource CaptureProtectorMutedBrush}" FontSize="10" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="False" Focusable="False">
+                <StackPanel x:Name="SettingsSections" Margin="20,14,16,6">
+                    <Border Style="{StaticResource SettingCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Battery monitoring" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Choose the source and the visible device." Style="{StaticResource FieldDescriptionStyle}" Margin="0,3,0,10"/>
+                            <Grid Margin="0,0,0,9">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="260"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Battery source" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="Prefer direct HID, or use Synapse logs." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="SourceCombo" Grid.Column="1" Height="34" Style="{StaticResource SelectionComboBoxStyle}" SelectionChanged="SourceChanged">
+                                    <ComboBoxItem Content="Automatic (prefer HID)"/>
+                                    <ComboBoxItem Content="Direct HID only"/>
+                                    <ComboBoxItem Content="Synapse logs only"/>
+                                </ComboBox>
+                            </Grid>
+                            <Grid Margin="0,0,0,9">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="260"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Synapse version" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="Used when reading Synapse log files." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="SynapseCombo" Grid.Column="1" Height="34" Style="{StaticResource SelectionComboBoxStyle}">
+                                    <ComboBoxItem Content="Automatic"/>
+                                    <ComboBoxItem Content="Synapse 3"/>
+                                    <ComboBoxItem Content="Synapse 4"/>
+                                </ComboBox>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="260"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Tray device" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="Shown in the notification area." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="DevicesCombo" Grid.Column="1" Height="34" Style="{StaticResource SelectionComboBoxStyle}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource SettingCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Refresh schedule" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Polling intervals in seconds." Style="{StaticResource FieldDescriptionStyle}" Margin="0,3,0,10"/>
+                            <Grid Margin="0,0,0,9">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="260"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Synapse refresh" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="How often to check Synapse logs." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <TextBox x:Name="SynapseInterval" Grid.Column="1" Style="{StaticResource CompactTextBoxStyle}" ToolTip="1–3600 seconds"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="260"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="HID refresh" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="How often to poll wireless devices." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <TextBox x:Name="HidInterval" Grid.Column="1" Style="{StaticResource CompactTextBoxStyle}" ToolTip="15–3600 seconds"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource SettingCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Appearance &amp; startup" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="Control how the monitor starts and looks." Style="{StaticResource FieldDescriptionStyle}" Margin="0,3,0,10"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Run at Windows startup" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="Start after signing in." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <controls:AnimatedToggleSwitch x:Name="StartupToggle" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ApplicationToggleSwitchStyle}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Show battery percentage" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="Large digits inside the tray icon." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <controls:AnimatedToggleSwitch x:Name="PercentageToggle" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ApplicationToggleSwitchStyle}"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Show charging indicator" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBlock Text="Show charging when reported by the device." Style="{StaticResource FieldDescriptionStyle}"/>
+                                </StackPanel>
+                                <controls:AnimatedToggleSwitch x:Name="ChargingToggle" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ApplicationToggleSwitchStyle}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+            <Border Grid.Row="3" Background="{DynamicResource CaptureProtectorSidebarBrush}" BorderBrush="{DynamicResource CaptureProtectorBorderBrush}" BorderThickness="0,1,0,0">
+                <Grid Margin="20,11">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Export diagnostics" Style="{StaticResource SecondaryButtonStyle}" Height="36" Click="ExportDiagnostics"/>
+                    <Button Grid.Column="2" Content="Cancel" Width="86" Height="36" Margin="0,0,8,0" Style="{StaticResource SecondaryButtonStyle}" Click="Cancel" IsCancel="True"/>
+                    <Button Grid.Column="3" Content="Save changes" Width="120" Height="36" Style="{StaticResource AccentButtonStyle}" Click="Save" IsDefault="True"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

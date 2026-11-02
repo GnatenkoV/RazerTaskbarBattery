@@ -1,0 +1,21 @@
+<UserControl x:Class="RazerTaskbar.UI.Controls.WindowHeader" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" Height="32">
+    <Border Background="{DynamicResource CaptureProtectorSidebarBrush}" BorderBrush="{DynamicResource CaptureProtectorBorderBrush}" BorderThickness="0,0,0,1">
+        <Grid x:Name="HeaderGrid" Background="Transparent" MouseLeftButtonDown="HeaderDrag" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="1" shell:WindowChrome.IsHitTestVisibleInChrome="True" Style="{StaticResource TitleBarButtonStyle}" Click="Minimize" ToolTip="Minimize">
+                <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="10" Text="&#xE921;"/>
+            </Button>
+            <Button x:Name="MaximizeButton" Grid.Column="2" shell:WindowChrome.IsHitTestVisibleInChrome="True" Style="{StaticResource TitleBarButtonStyle}" Click="Maximize" ToolTip="Maximize / Restore">
+                <TextBlock x:Name="MaximizeGlyph" FontFamily="Segoe MDL2 Assets" FontSize="10" Text="&#xE922;"/>
+            </Button>
+            <Button Grid.Column="3" shell:WindowChrome.IsHitTestVisibleInChrome="True" Style="{StaticResource CloseTitleBarButtonStyle}" Click="Close" ToolTip="Close">
+                <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="10" Text="&#xE8BB;"/>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>
