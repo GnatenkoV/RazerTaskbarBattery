@@ -37,7 +37,8 @@ jobs:
         run: |
           dotnet publish 'RazerTaskbarBattery/RazerTaskbarBattery.csproj' `
             -c Release `
-            -p:PublishProfile=SingleFile
+            -p:PublishProfile=SingleFile `
+            --output 'RazerTaskbarBattery/publish'
 
       - name: Prepare versioned release assets
         id: assets
