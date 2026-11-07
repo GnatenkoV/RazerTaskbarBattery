@@ -1,0 +1,35 @@
+<UserControl x:Class="RazerTaskbar.UI.Views.BatteryColorsSection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{StaticResource SettingCardStyle}">
+        <StackPanel>
+            <TextBlock Text="Battery colors" FontSize="14" FontWeight="SemiBold"/>
+            <TextBlock Text="Select a swatch to change its color. The previews update as you edit."
+                       Style="{StaticResource FieldDescriptionStyle}" Margin="0,3,0,10"/>
+            <Grid x:Name="ColorTable">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="50"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="50"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Charge level" Style="{StaticResource FieldLabelStyle}"/>
+                <TextBlock Grid.Column="1" Text="Border" HorizontalAlignment="Center" Style="{StaticResource FieldLabelStyle}"/>
+                <TextBlock Grid.Column="2" Text="Fill" HorizontalAlignment="Center" Style="{StaticResource FieldLabelStyle}"/>
+                <TextBlock Grid.Column="3" Text="Number" HorizontalAlignment="Center" Style="{StaticResource FieldLabelStyle}"/>
+                <TextBlock Grid.Column="4" Text="Empty interior" HorizontalAlignment="Center" Style="{StaticResource FieldLabelStyle}"/>
+                <TextBlock Grid.Column="5" Text="Preview" HorizontalAlignment="Center" Style="{StaticResource FieldLabelStyle}"/>
+            </Grid>
+            <Button Content="Reset colors" Height="32" HorizontalAlignment="Right" Margin="0,10,0,0"
+                    Style="{StaticResource SecondaryButtonStyle}" Click="ResetColors"/>
+        </StackPanel>
+    </Border>
+</UserControl>

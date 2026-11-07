@@ -10,6 +10,8 @@ public sealed class AppSettings
     public string SynapseVersion { get; set; } = "auto";
     public string BatterySource { get; set; } = "auto";
     public int HidPollSeconds { get; set; } = 60;
+    public int NoDevicePollSeconds { get; set; } = 1;
+    public BatteryPalette BatteryColors { get; set; } = new();
 
     public AppSettings Copy()
     {
@@ -22,7 +24,9 @@ public sealed class AppSettings
             ShownDeviceHandle = ShownDeviceHandle,
             SynapseVersion = SynapseVersion,
             BatterySource = BatterySource,
-            HidPollSeconds = HidPollSeconds
+            HidPollSeconds = HidPollSeconds,
+            NoDevicePollSeconds = NoDevicePollSeconds,
+            BatteryColors = BatteryColors
         };
     }
 
@@ -30,6 +34,8 @@ public sealed class AppSettings
     {
         PollingThrottleSeconds = Math.Clamp(PollingThrottleSeconds, 1, 3600);
         HidPollSeconds = Math.Clamp(HidPollSeconds, 15, 3600);
+        NoDevicePollSeconds = Math.Clamp(NoDevicePollSeconds, 1, 3600);
+        BatteryColors = (BatteryColors ?? new()).MigrateLegacyEmpty();
         if (BatterySource is not ("auto" or "hid" or "synapse"))
         {
             BatterySource = "auto";

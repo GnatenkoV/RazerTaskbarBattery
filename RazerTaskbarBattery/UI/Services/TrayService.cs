@@ -40,9 +40,11 @@ internal sealed class TrayService : IDisposable
     private bool _debugBatteryEnabled;
     private int _debugBatteryLevel = 50;
     private bool? _previewShowPercentage;
+    private BatteryPalette? _previewBatteryColors;
 #endif
 
-    private (int? Percentage, bool Charging, bool ShowNumber)? _lastIconState;
+    private (int? Percentage, bool Charging, bool ShowNumber, BatteryPalette Palette)? _lastIconState;
+    private bool HasConnectedDevices => _devices.Any(device => device.IsConnected);
     private bool _refreshing;
     private bool _settingsOpen;
     private bool _aboutOpen;
@@ -84,11 +86,7 @@ internal sealed class TrayService : IDisposable
 
         // The first tick runs after WPF has entered its dispatcher loop.
         _timer.Interval = TimeSpan.FromMilliseconds(250);
-        _timer.Tick += async (_, _) =>
-        {
-            _timer.Interval = TimeSpan.FromSeconds(_settings.PollingThrottleSeconds);
-            await RefreshAsync();
-        };
+        _timer.Tick += async (_, _) => await RefreshAsync();
         _timer.Start();
     }
 
@@ -191,10 +189,12 @@ internal sealed class TrayService : IDisposable
         }
 
         _refreshing = true;
+        _timer.Stop();
         try
         {
             AppSettings copy = _settings.Copy();
-            MonitorSnapshot snapshot = await Task.Run(() => _monitor.Scan(copy, _cancel.Token, forceHid), _cancel.Token);
+            bool scanHid = forceHid || !HasConnectedDevices;
+            MonitorSnapshot snapshot = await Task.Run(() => _monitor.Scan(copy, _cancel.Token, scanHid), _cancel.Token);
             if (_disposed)
             {
                 return;
@@ -202,7 +202,7 @@ internal sealed class TrayService : IDisposable
 
             _devices = snapshot.Devices;
             UpdateDevicesMenu();
-            DeviceStatus? selected = _devices.FirstOrDefault(x => x.Handle == _settings.ShownDeviceHandle);
+            DeviceStatus? selected = _devices.FirstOrDefault(x => x.IsConnected && x.Handle == _settings.ShownDeviceHandle);
             selected ??= _devices.Where(x => x.IsConnected).OrderBy(x => x.BatteryPercentage).FirstOrDefault();
             _displayDevice = selected;
 
@@ -237,6 +237,13 @@ internal sealed class TrayService : IDisposable
         finally
         {
             _refreshing = false;
+            if (!_disposed)
+            {
+                _timer.Interval = TimeSpan.FromSeconds(HasConnectedDevices
+                    ? _settings.PollingThrottleSeconds
+                    : _settings.NoDevicePollSeconds);
+                _timer.Start();
+            }
         }
     }
 
@@ -282,20 +289,22 @@ internal sealed class TrayService : IDisposable
         int? displayedPercentage = device?.BatteryPercentage;
         bool charging = _settings.DisplayChargingState && device is { IsCharging: true, ChargingKnown: true };
         bool showNumber = _settings.ShowPercentage;
+        BatteryPalette palette = _settings.BatteryColors;
 #if DEBUG
         if (_debugBatteryEnabled)
         {
             displayedPercentage = _debugBatteryLevel;
         }
         showNumber = _previewShowPercentage ?? showNumber;
+        palette = _previewBatteryColors ?? palette;
 #endif
-        var state = (Percentage: displayedPercentage, Charging: charging, ShowNumber: showNumber);
+        var state = (Percentage: displayedPercentage, Charging: charging, ShowNumber: showNumber, Palette: palette);
         if (_lastIconState == state)
         {
             return;
         }
 
-        Icon next = BatteryIcon.Create(state.Percentage, state.Charging, state.ShowNumber);
+        Icon next = BatteryIcon.Create(state.Percentage, state.Charging, state.ShowNumber, state.Palette);
         _icon.Icon = next;
         _renderedIcon?.Dispose();
         _renderedIcon = next;
@@ -320,11 +329,12 @@ internal sealed class TrayService : IDisposable
         {
             SettingsWindow dialog = new(_settings, _devices, () => _monitor.LastDiagnostics);
 #if DEBUG
-            dialog.ConfigureDebugBatteryPreview(_debugBatteryEnabled, _debugBatteryLevel, (enabled, level, showNumber) =>
+            dialog.ConfigureDebugBatteryPreview(_debugBatteryEnabled, _debugBatteryLevel, (enabled, level, showNumber, palette) =>
             {
                 _debugBatteryEnabled = enabled;
                 _debugBatteryLevel = Math.Clamp(level, 0, 100);
                 _previewShowPercentage = showNumber;
+                _previewBatteryColors = palette;
                 UpdateIcon(_displayDevice);
             });
 #endif
@@ -339,11 +349,10 @@ internal sealed class TrayService : IDisposable
                 StartupManager.Configure(updated.RunAtStartup);
                 _store.Save(updated);
                 _settings = updated;
-                _timer.Interval = TimeSpan.FromSeconds(_settings.PollingThrottleSeconds);
 #if DEBUG
                 saved = true;
 #endif
-                _lastIconState = null;
+                UpdateIcon(_displayDevice);
                 _ = RefreshAsync(forceHid: true);
             }
             catch (Exception ex)
@@ -361,6 +370,7 @@ internal sealed class TrayService : IDisposable
                 _debugBatteryLevel = initialDebugLevel;
             }
             _previewShowPercentage = null;
+            _previewBatteryColors = null;
             // Restore the saved setting on Cancel or keep the override after Save.
             UpdateIcon(_displayDevice);
 #endif

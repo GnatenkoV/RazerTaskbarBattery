@@ -4,6 +4,8 @@ using System.Drawing.Imaging;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Windows.Media.Imaging;
+using RazerTaskbar.Models;
 
 namespace RazerTaskbar.UI;
 
@@ -17,23 +19,16 @@ internal static class BatteryIcon
     private const int SmallIconMetric = 49; // SM_CXSMICON
 
     private static readonly Color BatteryBackground = Color.FromArgb(5, 17, 8);
-    private static readonly Color EmptyCharge = Color.FromArgb(8, 48, 13);
-    private static readonly Color GreenOutline = Color.FromArgb(36, 255, 13);
-    private static readonly Color GreenFill = Color.FromArgb(30, 225, 5);
-    private static readonly Color YellowOutline = Color.FromArgb(255, 205, 32);
-    private static readonly Color YellowFill = Color.FromArgb(242, 173, 15);
-    private static readonly Color RedOutline = Color.FromArgb(255, 75, 75);
-    private static readonly Color RedFill = Color.FromArgb(226, 49, 49);
     private static readonly Color UnknownOutline = Color.FromArgb(164, 173, 168);
 
-    public static Icon Create(int? percentage, bool isCharging, bool showNumber)
+    public static Icon Create(int? percentage, bool isCharging, bool showNumber, BatteryPalette palette)
     {
         int? value = percentage.HasValue ? Math.Clamp(percentage.Value, 0, 100) : null;
         var images = new List<byte[]>(IconSizes.Length);
 
         foreach (int size in IconSizes)
         {
-            using var bitmap = Draw(size, value, isCharging, showNumber);
+            using var bitmap = Draw(size, value, isCharging, showNumber, palette);
             using var png = new MemoryStream();
             bitmap.Save(png, ImageFormat.Png);
             images.Add(png.ToArray());
@@ -76,7 +71,22 @@ internal static class BatteryIcon
         return (Icon)icon.Clone();
     }
 
-    private static Bitmap Draw(int size, int? percentage, bool isCharging, bool showNumber)
+    public static BitmapSource CreatePreview(int percentage, BatteryPalette palette)
+    {
+        using var bitmap = Draw(64, percentage, false, true, palette);
+        using var png = new MemoryStream();
+        bitmap.Save(png, ImageFormat.Png);
+        png.Position = 0;
+        var preview = BitmapFrame.Create(png, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        preview.Freeze();
+        return preview;
+    }
+
+    private static Color RgbColor(int rgb) => rgb == BatteryPalette.Transparent
+        ? Color.Transparent
+        : Color.FromArgb(unchecked((int)0xFF000000) | rgb);
+
+    private static Bitmap Draw(int size, int? percentage, bool isCharging, bool showNumber, BatteryPalette palette)
     {
         var bitmap = new Bitmap(size, size, PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(bitmap);
@@ -86,19 +96,10 @@ internal static class BatteryIcon
         g.Clear(Color.Transparent);
 
         float scale = size / 64f;
-        Color outline = percentage.HasValue ? percentage.Value switch
-        {
-            <= 20 => RedOutline,
-            <= 40 => YellowOutline,
-            _ => GreenOutline
-        } : UnknownOutline;
-
-        Color fill = percentage.HasValue ? percentage.Value switch
-        {
-            <= 20 => RedFill,
-            <= 40 => YellowFill,
-            _ => GreenFill
-        } : BatteryBackground;
+        BatteryLevelColors colors = palette.ForPercentage(percentage.GetValueOrDefault());
+        Color outline = percentage.HasValue ? RgbColor(colors.Border) : UnknownOutline;
+        Color fill = RgbColor(colors.Fill);
+        Color number = percentage.HasValue ? RgbColor(colors.Number) : Color.White;
 
         // The body deliberately uses almost the entire tray tile. The terminal
         // remains visible, but does not compete with the percentage for space.
@@ -107,24 +108,25 @@ internal static class BatteryIcon
         RectangleF inner = Inset(outer, 3.5f * scale);
 
         using var outlineBrush = new SolidBrush(outline);
-        using var darkBrush = new SolidBrush(BatteryBackground);
-        using var emptyBrush = new SolidBrush(EmptyCharge);
+        using var emptyBrush = new SolidBrush(RgbColor(percentage.HasValue ? colors.Empty : BatteryPalette.DefaultEmpty));
         using var terminalPath = RoundedRect(terminal, 5f * scale);
         using var outerPath = RoundedRect(outer, 9.5f * scale);
         using var innerPath = RoundedRect(inner, 6.5f * scale);
 
+        // Copy alpha as well as color so a transparent interior clears the border beneath it.
+        g.CompositingMode = CompositingMode.SourceCopy;
         g.FillPath(outlineBrush, terminalPath);
         using var innerTerminalPath = RoundedRect(Inset(terminal, 3f * scale), 2f * scale);
-        g.FillPath(darkBrush, innerTerminalPath);
+        g.FillPath(emptyBrush, innerTerminalPath);
         g.FillPath(outlineBrush, outerPath);
-        g.FillPath(darkBrush, innerPath);
+        g.FillPath(emptyBrush, innerPath);
+        g.CompositingMode = CompositingMode.SourceOver;
 
         // Clip the charge level to the rounded interior, including at 0% and 100%.
         if (percentage.HasValue)
         {
             GraphicsState state = g.Save();
             g.SetClip(innerPath);
-            g.FillRectangle(emptyBrush, inner);
             float chargeWidth = inner.Width * percentage.Value / 100f;
             if (chargeWidth > 0)
             {
@@ -134,13 +136,13 @@ internal static class BatteryIcon
             g.Restore(state);
         }
 
-        if (showNumber || !percentage.HasValue)
+        if ((showNumber || !percentage.HasValue) && number.A != 0)
         {
             string label = percentage?.ToString() ?? "?";
             // Reserve a generous interior region for the digits, particularly
             // for 100%, which needs three characters in the same small tray tile.
             RectangleF textBounds = Rect(5.5f, 13.5f, 44f, 36f, scale);
-            DrawLabel(g, label, textBounds, scale);
+            DrawLabel(g, label, textBounds, scale, number);
         }
 
         // A contrasting badge beside the digits remains visible even at 16px.
@@ -177,7 +179,7 @@ internal static class BatteryIcon
     [DllImport("user32.dll")]
     private static extern int GetSystemMetricsForDpi(int index, uint dpi);
 
-    private static void DrawLabel(Graphics g, string label, RectangleF area, float scale)
+    private static void DrawLabel(Graphics g, string label, RectangleF area, float scale, Color color)
     {
         using var fontFamily = new FontFamily("Arial");
         using var path = new GraphicsPath();
@@ -201,16 +203,15 @@ internal static class BatteryIcon
             path.Transform(transform);
         }
 
-        // The dark outline separates white numbers from a fully charged green
-        // background; at small sizes this is more effective than a text shadow.
+        // Outline the digits for contrast against the fill.
         using var darkPen = new Pen(Color.FromArgb(195, 3, 17, 5), Math.Max(0.9f, 2.1f * scale))
         {
             LineJoin = LineJoin.Round
         };
 
-        using var whiteBrush = new SolidBrush(Color.White);
+        using var textBrush = new SolidBrush(color);
         g.DrawPath(darkPen, path);
-        g.FillPath(whiteBrush, path);
+        g.FillPath(textBrush, path);
     }
 
     private static void DrawChargingBolt(Graphics g, float scale)
@@ -221,6 +222,7 @@ internal static class BatteryIcon
             Point(55f, 43f, scale), Point(50f, 60f, scale),
             Point(63f, 37f, scale), Point(56f, 37f, scale)
         ];
+
         using var border = new Pen(BatteryBackground, 4f * scale) { LineJoin = LineJoin.Round };
         using var brush = new SolidBrush(Color.FromArgb(255, 225, 50));
         g.DrawPolygon(border, points);

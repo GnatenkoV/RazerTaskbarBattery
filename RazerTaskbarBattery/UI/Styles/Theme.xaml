@@ -44,4 +44,13 @@
     <SolidColorBrush x:Key="CaptureProtectorImageLayerHoverBrush" Color="#28564F"/>
     <SolidColorBrush x:Key="CaptureProtectorQrLayerHoverBrush" Color="#5A4830"/>
     <SolidColorBrush x:Key="CaptureProtectorShaderLayerHoverBrush" Color="#493868"/>
+    <DrawingBrush x:Key="TransparencyCheckerBrush" TileMode="Tile"
+                  Viewport="0,0,8,8" ViewportUnits="Absolute" Viewbox="0,0,8,8" ViewboxUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#B6BEC7" Geometry="M0,0 H8 V8 H0 Z"/>
+                <GeometryDrawing Brush="#7E8996" Geometry="M0,0 H4 V4 H0 Z M4,4 H8 V8 H4 Z"/>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
 </ResourceDictionary>

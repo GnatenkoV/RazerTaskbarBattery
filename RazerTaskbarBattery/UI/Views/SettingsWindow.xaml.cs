@@ -15,10 +15,10 @@ public partial class SettingsWindow : Window
 
 #if DEBUG
     private DebugBatterySection? _debugBatterySection;
-    private Action<bool, int, bool>? _debugPreview;
+    private Action<bool, int, bool, BatteryPalette>? _debugPreview;
 
     // Debug overrides exist only in memory and are not part of AppSettings.
-    public void ConfigureDebugBatteryPreview(bool enabled, int level, Action<bool, int, bool> onPreview)
+    public void ConfigureDebugBatteryPreview(bool enabled, int level, Action<bool, int, bool, BatteryPalette> onPreview)
     {
         if (_debugBatterySection is not null)
         {
@@ -28,12 +28,13 @@ public partial class SettingsWindow : Window
         _debugPreview = onPreview;
         _debugBatterySection = new DebugBatterySection(enabled, level);
         _debugBatterySection.StateChanged += (active, value) => PublishDebugPreview(active, value);
-        PercentageToggle.Checked += PercentageDisplayChanged;
-        PercentageToggle.Unchecked += PercentageDisplayChanged;
+        PercentageToggle.Checked += (_, _) => PreviewAppearanceChanged();
+        PercentageToggle.Unchecked += (_, _) => PreviewAppearanceChanged();
+        BatteryColors.PaletteChanged += _ => PreviewAppearanceChanged();
         SettingsSections.Children.Add(_debugBatterySection);
     }
 
-    private void PercentageDisplayChanged(object sender, RoutedEventArgs e)
+    private void PreviewAppearanceChanged()
     {
         if (_debugBatterySection is not null)
         {
@@ -43,7 +44,7 @@ public partial class SettingsWindow : Window
 
     private void PublishDebugPreview(bool enabled, int level)
     {
-        _debugPreview?.Invoke(enabled, level, PercentageToggle.IsChecked == true);
+        _debugPreview?.Invoke(enabled, level, PercentageToggle.IsChecked == true, BatteryColors.Palette);
     }
 #endif
 
@@ -60,6 +61,8 @@ public partial class SettingsWindow : Window
         ChargingToggle.IsChecked = settings.DisplayChargingState;
         SynapseInterval.Text = settings.PollingThrottleSeconds.ToString();
         HidInterval.Text = settings.HidPollSeconds.ToString();
+        NoDeviceInterval.Text = settings.NoDevicePollSeconds.ToString();
+        BatteryColors.SetPalette(settings.BatteryColors);
         _deviceHandles.Add(string.Empty);
         DevicesCombo.Items.Add("Automatically select device");
 
@@ -111,6 +114,13 @@ public partial class SettingsWindow : Window
             return;
         }
 
+        if (!int.TryParse(NoDeviceInterval.Text, out int noDeviceInterval) || noDeviceInterval is < 1 or > 3600)
+        {
+            MessageBox.Show(this, "No-device retry must be between 1 and 3600 seconds.", "Invalid interval", MessageBoxButton.OK, MessageBoxImage.Warning);
+            NoDeviceInterval.Focus();
+            return;
+        }
+
         UpdatedSettings.RunAtStartup = StartupToggle.IsChecked == true;
         UpdatedSettings.ShowPercentage = PercentageToggle.IsChecked == true;
         UpdatedSettings.DisplayChargingState = ChargingToggle.IsChecked == true;
@@ -119,6 +129,8 @@ public partial class SettingsWindow : Window
         UpdatedSettings.ShownDeviceHandle = _deviceHandles[Math.Max(0, DevicesCombo.SelectedIndex)];
         UpdatedSettings.PollingThrottleSeconds = synapseInterval;
         UpdatedSettings.HidPollSeconds = hidInterval;
+        UpdatedSettings.NoDevicePollSeconds = noDeviceInterval;
+        UpdatedSettings.BatteryColors = BatteryColors.Palette;
         UpdatedSettings.Normalize();
         DialogResult = true;
     }

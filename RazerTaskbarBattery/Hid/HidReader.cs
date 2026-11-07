@@ -13,9 +13,9 @@ internal sealed record HidScan(IReadOnlyList<DeviceStatus> Devices, IReadOnlyLis
 
 internal static class HidReader
 {
-    // Unknown PIDs that didn't respond are retried after a cooldown rather
-    // than sending four vendor-specific feature requests every poll interval.
-    private static readonly ConcurrentDictionary<string, DateTimeOffset> AdaptiveRetryAfter = new(StringComparer.OrdinalIgnoreCase);
+    // Only unrecognized interfaces that have never answered use the cooldown.
+    // A null retry time marks an interface that has returned a valid reading.
+    private static readonly ConcurrentDictionary<string, DateTimeOffset?> AdaptiveRetryAfter = new(StringComparer.OrdinalIgnoreCase);
     private static readonly TimeSpan AdaptiveRetryDelay = TimeSpan.FromMinutes(15);
 
     public static HidScan Read(CancellationToken cancellationToken)
@@ -36,7 +36,7 @@ internal static class HidReader
                 continue;
             }
 
-            if (adaptive && AdaptiveRetryAfter.TryGetValue(id, out DateTimeOffset retryAt) && DateTimeOffset.UtcNow < retryAt)
+            if (adaptive && AdaptiveRetryAfter.TryGetValue(id, out var retry) && retry is { } retryAt && DateTimeOffset.UtcNow < retryAt)
             {
                 messages.Add($"  Adaptive scan skipped until {retryAt:O} (last scan found no valid battery response).");
                 continue;
@@ -62,11 +62,16 @@ internal static class HidReader
                 }
             }
 
-            // Set a negative cache ONLY if the device failed to respond.
             if (adaptive)
             {
-                if (found.Any(d => d.Handle == id)) AdaptiveRetryAfter.TryRemove(id, out _);
-                else AdaptiveRetryAfter[id] = DateTimeOffset.UtcNow + AdaptiveRetryDelay;
+                if (found.Any(d => d.Handle == id))
+                {
+                    AdaptiveRetryAfter[id] = null;
+                }
+                else if (!AdaptiveRetryAfter.TryGetValue(id, out var previousRetry) || previousRetry.HasValue)
+                {
+                    AdaptiveRetryAfter[id] = DateTimeOffset.UtcNow + AdaptiveRetryDelay;
+                }
             }
         }
 
